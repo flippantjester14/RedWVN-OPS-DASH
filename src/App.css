@@ -1,0 +1,135 @@
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+.main-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "alert"
+    "metrics"
+    "map"
+    "nodes"
+    "terminal"
+    "replay";
+  gap: 14px;
+  padding: 14px;
+  max-width: 1920px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+}
+
+.alert-section {
+  grid-area: alert;
+}
+
+.left-panel {
+  grid-area: nodes;
+}
+
+.center-panel {
+  grid-area: map;
+  min-height: 340px;
+}
+
+.right-panel {
+  grid-area: terminal;
+  min-height: 280px;
+}
+
+.replay-section {
+  grid-area: replay;
+}
+
+.metrics-section {
+  grid-area: metrics;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .main-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "alert alert"
+      "metrics metrics"
+      "map map"
+      "nodes terminal"
+      "replay replay";
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .metrics-section {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .center-panel {
+    min-height: 400px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .main-grid {
+    grid-template-columns: 300px 1fr 360px;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+      "alert alert alert"
+      "metrics metrics metrics"
+      "nodes map terminal"
+      "replay replay replay";
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .center-panel {
+    min-height: 100%;
+  }
+
+  .left-panel,
+  .right-panel {
+    max-height: calc(100vh - 340px);
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 1600px) {
+  .main-grid {
+    grid-template-columns: 340px 1fr 400px;
+    gap: 22px;
+    padding: 24px;
+  }
+}
+
+.sim-badge {
+  position: fixed;
+  bottom: 80px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid var(--amber-warning);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--amber-warning);
+  letter-spacing: 1.5px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.sim-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--amber-warning);
+  border-radius: 50%;
+}
