@@ -106,6 +106,7 @@ export default function App() {
   const [flights, setFlights] = useState([])
   const [period, setPeriod] = useState('all') // 'daily', 'weekly', 'all'
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const [clock, setClock] = useState(ts())
   useEffect(() => { const t = setInterval(() => setClock(ts()), 1000); return () => clearInterval(t) }, [])
@@ -158,18 +159,24 @@ export default function App() {
 
       {ready && <>
         <header className="header">
-          <div className="logo">
-            <span className="logo-mark">Redwing</span>
-            <div className="logo-divider" />
-            <span className="logo-sub">Operations</span>
+          <div className="header-main">
+            <div className="logo">
+              <span className="logo-mark">Redwing</span>
+              <div className="logo-divider" />
+              <span className="logo-sub">Operations</span>
+            </div>
+            <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+              {menuOpen ? '✕' : '☰'}
+            </button>
           </div>
-          <nav className="nav-tabs">
+
+          <nav className={`nav-tabs ${menuOpen ? 'mobile-open' : ''}`}>
             {['overview', 'medical', 'analytics', 'fleet', 'flights'].map(t => (
-              <button key={t} className={`nav-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+              <button key={t} className={`nav-tab ${tab === t ? 'active' : ''}`} onClick={() => { setTab(t); setMenuOpen(false); }}>{t}</button>
             ))}
           </nav>
+
           <div className="header-right">
-            {/* Period Switcher - in header so it's always accessible */}
             <div className="period-toggle">
               {['daily', 'weekly', 'all'].map(p => (
                 <button
@@ -181,9 +188,11 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <span className="header-time">{clock} IST</span>
-            <div className={`live-pill ${!flights.length ? 'loading' : ''}`}>
-              <span className="pulse-dot" /> {flights.length ? 'LIVE SYNC' : 'CONNECTING...'}
+            <div className="status-group">
+              <span className="header-time">{clock} IST</span>
+              <div className={`live-pill ${!flights.length ? 'loading' : ''}`}>
+                <span className="pulse-dot" /> {flights.length ? 'LIVE SYNC' : 'CONNECTING...'}
+              </div>
             </div>
           </div>
         </header>
@@ -195,7 +204,7 @@ export default function App() {
             {tab === 'overview' && (
               <motion.div key="ov" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
 
-                <div className="hero-banner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div className="hero-banner">
                   <div>
                     <div className="hero-label">Andhra Pradesh · Paderu—Araku Corridor</div>
                     <div className="hero-title">Flight Operations Dashboard</div>
@@ -235,7 +244,7 @@ export default function App() {
 
                 {hasData && <>
                   {/* Daily activity chart + Route table */}
-                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+                  <div className="responsive-grid-2">
                     <div className="panel">
                       <div className="panel-head">
                         <span className="panel-title">Daily Flight Activity</span>
@@ -278,7 +287,7 @@ export default function App() {
                   </div>
 
                   {/* Pilot leaderboard + Node stats */}
-                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+                  <div className="responsive-grid-2">
                     <div className="panel">
                       <div className="panel-head">
                         <span className="panel-title">Pilot Leaderboard</span>
@@ -394,7 +403,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+                    <div className="responsive-grid-2">
                       <div className="panel">
                         <div className="panel-head">
                           <span className="panel-title">Daily Medical Volume</span>
@@ -469,7 +478,7 @@ export default function App() {
 
                 <ErrorBoundary resetKey={period}>
                   {/* Precland + LFAO */}
-                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+                  <div className="responsive-grid-2">
                     <div className="stat-card" style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                       <Ring value={preclandOn} max={preclandTotal} size={64} color="var(--green)" />
                       <div>

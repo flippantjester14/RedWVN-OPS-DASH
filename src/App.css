@@ -19,6 +19,12 @@
   z-index: 100;
 }
 
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -42,7 +48,7 @@
 .logo-sub {
   font-size: 13px;
   font-weight: 500;
-  opacity: 0.7;
+  opacity: 0.6;
   letter-spacing: 0.5px;
 }
 
@@ -80,6 +86,12 @@
 }
 
 .header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.status-group {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -185,6 +197,13 @@
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 28px;
 }
@@ -669,6 +688,16 @@
   }
 }
 
+@media (max-width: 768px) {
+  .responsive-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 @media (max-width: 640px) {
   .stats-row {
     grid-template-columns: 1fr;
@@ -679,19 +708,99 @@
   }
 
   .header {
-    padding: 0 16px;
+    padding: 10px 16px;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-main {
+    height: 48px;
+    width: 100%;
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  .header-right {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+
+  .status-group {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .nav-tabs {
     display: none;
+    width: 100%;
+    flex-direction: column;
+    height: auto;
+    background: rgba(0, 0, 0, 0.3);
+    margin: 10px 0;
+    border-radius: 8px;
+    padding: 4px 0;
+  }
+
+  .nav-tabs.mobile-open {
+    display: flex;
+  }
+
+  .nav-tab {
+    height: 44px;
+    padding: 0 16px;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+  }
+
+  .nav-tab.active {
+    border-left-color: var(--pink);
+    background: rgba(255, 32, 128, 0.05);
   }
 
   .hero-banner {
     padding: 28px 24px;
+    flex-direction: column;
+    align-items: flex-start !important;
   }
 
   .hero-title {
     font-size: 24px;
+  }
+
+  .logo-sub {
+    display: none;
+  }
+
+  .logo-divider {
+    display: none;
+  }
+
+  .period-toggle {
+    scale: 0.9;
+    transform-origin: left center;
+  }
+}
+
+/* ─── Hamburger Menu ─── */
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+@media (max-width: 640px) {
+  .menu-toggle {
+    display: block;
   }
 }
 
