@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchFlightData, computeMetrics, getRouteStats, getPilotStats, getUAVStats, getDailyStats, getNodeStats, filterFlightsByPeriod, getMedicalOpsStats } from './data/flights'
 import FleetMap from './components/FleetMap'
-import logo from './assets/redwing logo.png'
+import logo from './assets/redwing_logo.png'
 import './App.css'
 
 function ts() {
@@ -610,90 +610,96 @@ export default function App() {
 
             {/* ═══ FLEET ═══ */}
             {tab === 'fleet' && (
-              <motion.div key="fl" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <div className="section-header" style={{ marginTop: 4 }}>
-                  <h2 className="section-title">Fleet Status</h2>
-                  <span className="section-count">{uavs.length} UAVs</span>
-                </div>
-
-                <FleetMap />
-
-                <div className="fleet-grid">
-                  {uavs.map(u => {
-                    const isAS04 = u.id === 'AS04'
-                    return (
-                      <div className="fleet-card" key={u.id}>
-                        <div className="fleet-top">
-                          <span className="fleet-id">{u.id}</span>
-                          <span className={`fleet-status ${isAS04 ? 'green' : 'amber'}`}>{isAS04 ? 'ACTIVE' : 'STANDBY'}</span>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Flights</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{u.flights}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Distance</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.round(u.distance)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>km</span></div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Airtime</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.floor(u.minutes / 60)}h{u.minutes % 60}m</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Payload</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{(u.payload / 1000).toFixed(1)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>kg</span></div>
-                          </div>
-                        </div>
-
-                        <div className="fleet-stats">
-                          <span>Live <strong>{u.live}</strong></span>
-                          <span>Test <strong>{u.test}</strong></span>
-                          <span>FLS <strong style={{ color: 'var(--green)' }}>{u.live > 0 ? 'ACTIVE' : 'N/A'}</strong></span>
-                          <span>System <strong style={{ color: 'var(--green)' }}>V 2.0</strong></span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Flights by UAV */}
-                {hasData && <>
-                  <div className="section-header" style={{ marginTop: 28 }}>
-                    <h2 className="section-title">Flights by Aircraft</h2>
+              <motion.div key="fl" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="fleet-tab-layout">
+                <div className="fleet-split-view">
+                  <div className="fleet-map-pane">
+                    <FleetMap />
                   </div>
-                  {uavs.map(u => {
-                    const uavFlights = displayFlights.filter(f => f.uav === u.id)
-                    return (
-                      <div key={u.id} className="table-card" style={{ marginBottom: 16 }}>
-                        <div className="panel-head">
-                          <span className="panel-title">{u.id}</span>
-                          <span className="panel-green">{uavFlights.length} FLIGHTS</span>
-                        </div>
-                        <div className="table-wrap">
-                          <table className="data-table"><thead><tr>
-                            <th>Date</th><th>ID</th><th>Type</th><th>Pilot</th><th>Route</th><th>Dist</th><th>Dur</th><th>Payload</th><th>Precland</th>
-                          </tr></thead><tbody>
-                              {[...uavFlights].reverse().slice(0, 10).map((f, i) => (
-                                <tr key={i}>
-                                  <td className="mono">{f.date}</td>
-                                  <td className="mono bold">{f.flightId}</td>
-                                  <td><span className={`type-badge ${f.type === 'Live' ? 'live' : 'test'}`}>{f.type}</span></td>
-                                  <td>{f.pilot}</td>
-                                  <td style={{ color: 'var(--text)' }}>{f.from} → {f.to}</td>
-                                  <td className="mono">{f.distance > 0 ? `${f.distance}` : '-'}</td>
-                                  <td className="mono">{f.duration}</td>
-                                  <td className="mono">{f.payload > 0 ? `${f.payload}g` : '-'}</td>
-                                  <td><span className={`type-badge ${f.precland === 'On Marker' ? 'live' : 'test'}`}>{f.precland?.replace('Marker', '')}</span></td>
-                                </tr>
-                              ))}
-                            </tbody></table>
-                        </div>
+
+                  <div className="fleet-sidebar">
+                    <div className="section-header" style={{ marginTop: 0, marginBottom: 16 }}>
+                      <h2 className="section-title">Fleet Status</h2>
+                      <span className="section-count">{uavs.length} UAVs</span>
+                    </div>
+
+                    <div className="fleet-grid">
+                      {uavs.map(u => {
+                        const isAS04 = u.id === 'AS04'
+                        return (
+                          <div className="fleet-card" key={u.id}>
+                            <div className="fleet-top">
+                              <span className="fleet-id">{u.id}</span>
+                              <span className={`fleet-status ${isAS04 ? 'green' : 'amber'}`}>{isAS04 ? 'ACTIVE' : 'STANDBY'}</span>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Flights</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{u.flights}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Distance</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.round(u.distance)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>km</span></div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Airtime</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.floor(u.minutes / 60)}h{u.minutes % 60}m</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Payload</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{(u.payload / 1000).toFixed(1)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>kg</span></div>
+                              </div>
+                            </div>
+
+                            <div className="fleet-stats">
+                              <span>Live <strong>{u.live}</strong></span>
+                              <span>Test <strong>{u.test}</strong></span>
+                              <span>FLS <strong style={{ color: 'var(--green)' }}>{u.live > 0 ? 'ACTIVE' : 'N/A'}</strong></span>
+                              <span>System <strong style={{ color: 'var(--green)' }}>V 2.0</strong></span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Flights by UAV */}
+                    {hasData && <>
+                      <div className="section-header" style={{ marginTop: 28 }}>
+                        <h2 className="section-title">Flights by Aircraft</h2>
                       </div>
-                    )
-                  })}
-                </>}
+                      {uavs.map(u => {
+                        const uavFlights = displayFlights.filter(f => f.uav === u.id)
+                        return (
+                          <div key={u.id} className="table-card" style={{ marginBottom: 16 }}>
+                            <div className="panel-head">
+                              <span className="panel-title">{u.id}</span>
+                              <span className="panel-green">{uavFlights.length} FLIGHTS</span>
+                            </div>
+                            <div className="table-wrap">
+                              <table className="data-table"><thead><tr>
+                                <th>Date</th><th>ID</th><th>Type</th><th>Pilot</th><th>Route</th><th>Dist</th><th>Dur</th><th>Payload</th><th>Precland</th>
+                              </tr></thead><tbody>
+                                  {[...uavFlights].reverse().slice(0, 10).map((f, i) => (
+                                    <tr key={i}>
+                                      <td className="mono">{f.date}</td>
+                                      <td className="mono bold">{f.flightId}</td>
+                                      <td><span className={`type-badge ${f.type === 'Live' ? 'live' : 'test'}`}>{f.type}</span></td>
+                                      <td>{f.pilot}</td>
+                                      <td style={{ color: 'var(--text)' }}>{f.from} → {f.to}</td>
+                                      <td className="mono">{f.distance > 0 ? `${f.distance}` : '-'}</td>
+                                      <td className="mono">{f.duration}</td>
+                                      <td className="mono">{f.payload > 0 ? `${f.payload}g` : '-'}</td>
+                                      <td><span className={`type-badge ${f.precland === 'On Marker' ? 'live' : 'test'}`}>{f.precland?.replace('Marker', '')}</span></td>
+                                    </tr>
+                                  ))}
+                                </tbody></table>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </>}
+                  </div>
+                </div>
               </motion.div>
             )}
 

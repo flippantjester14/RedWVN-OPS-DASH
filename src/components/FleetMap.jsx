@@ -10,16 +10,14 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-// Custom drone icon (using a simple SVG as a placeholder or standard marker with rotation if possible, 
-// but for now standard marker is safer)
-// Custom drone icon
+// Custom drone icon (Fixed Wing)
 const droneIcon = new L.DivIcon({
     className: 'drone-marker',
-    html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px; color: #FF2080; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transform: rotate(-45deg);">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+    html: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 40px; height: 40px; color: #FF2080; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transform: rotate(45deg);">
+    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
   </svg>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
     popupAnchor: [0, -10],
 })
 
