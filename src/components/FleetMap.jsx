@@ -12,8 +12,12 @@ L.Icon.Default.mergeOptions({
 
 // Custom drone icon (using a simple SVG as a placeholder or standard marker with rotation if possible, 
 // but for now standard marker is safer)
-const droneIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', // Placeholder drone icon
+// Custom drone icon
+const droneIcon = new L.DivIcon({
+    className: 'drone-marker',
+    html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px; color: #FF2080; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transform: rotate(-45deg);">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+  </svg>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
     popupAnchor: [0, -10],
