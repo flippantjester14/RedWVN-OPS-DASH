@@ -159,21 +159,24 @@ export default function App() {
 
       {ready && <>
         <header className="header">
-          <div className="logo">
-            <span className="logo-mark">Redwing</span>
-            <div className="logo-divider" />
-            <span className="logo-sub">Operations</span>
+          <div className="header-main">
+            <div className="logo">
+              <span className="logo-mark">Redwing</span>
+              <div className="logo-divider" />
+              <span className="logo-sub">Operations</span>
+            </div>
+            <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+              {menuOpen ? '✕' : '☰'}
+            </button>
           </div>
-          <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? '✕' : '☰'}
-          </button>
+
           <nav className={`nav-tabs ${menuOpen ? 'mobile-open' : ''}`}>
             {['overview', 'medical', 'analytics', 'fleet', 'flights'].map(t => (
               <button key={t} className={`nav-tab ${tab === t ? 'active' : ''}`} onClick={() => { setTab(t); setMenuOpen(false); }}>{t}</button>
             ))}
           </nav>
+
           <div className="header-right">
-            {/* Period Switcher - in header so it's always accessible */}
             <div className="period-toggle">
               {['daily', 'weekly', 'all'].map(p => (
                 <button
@@ -185,9 +188,11 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <span className="header-time">{clock} IST</span>
-            <div className={`live-pill ${!flights.length ? 'loading' : ''}`}>
-              <span className="pulse-dot" /> {flights.length ? 'LIVE SYNC' : 'CONNECTING...'}
+            <div className="status-group">
+              <span className="header-time">{clock} IST</span>
+              <div className={`live-pill ${!flights.length ? 'loading' : ''}`}>
+                <span className="pulse-dot" /> {flights.length ? 'LIVE SYNC' : 'CONNECTING...'}
+              </div>
             </div>
           </div>
         </header>
