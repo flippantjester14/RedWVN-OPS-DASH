@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchFlightData, computeMetrics, getRouteStats, getPilotStats, getUAVStats, getDailyStats, getNodeStats, filterFlightsByPeriod, getMedicalOpsStats } from './data/flights'
+import FleetMap from './components/FleetMap'
 import './App.css'
 
 function ts() {
@@ -583,6 +584,8 @@ export default function App() {
                   <h2 className="section-title">Fleet Status</h2>
                   <span className="section-count">{uavs.length} UAVs</span>
                 </div>
+
+                <FleetMap />
 
                 <div className="fleet-grid">
                   {uavs.map(u => {
