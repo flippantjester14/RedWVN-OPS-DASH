@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo, Component } from 'react'
+import { useState, useEffect, useMemo, useCallback, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchFlightData, computeMetrics, getRouteStats, getPilotStats, getUAVStats, getDailyStats, getNodeStats, filterFlightsByPeriod, getMedicalOpsStats } from './data/flights'
+import FleetMap from './components/FleetMap'
+import logo from './assets/redwing_logo.png'
 import './App.css'
 
 function ts() {
@@ -36,16 +38,41 @@ class ErrorBoundary extends Component {
 
 /* ─── Splash ─── */
 function Splash({ onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 800); return () => clearTimeout(t) }, [onDone])
+  useEffect(() => { const t = setTimeout(onDone, 2000); return () => clearTimeout(t) }, [onDone])
   return (
-    <motion.div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1C0067', zIndex: 2000 }}
-      initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
-      <motion.div style={{ textAlign: 'center' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, delay: 0.1 }}>
-        <div style={{ fontFamily: 'var(--display)', fontSize: 36, fontWeight: 800, color: 'white', letterSpacing: 2 }}>REDWING</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, marginTop: 4, fontWeight: 600 }}>OPERATIONS DASHBOARD</div>
-        <div style={{ width: 48, height: 3, background: 'rgba(255,255,255,0.1)', margin: '20px auto 0', borderRadius: 2, overflow: 'hidden' }}>
-          <motion.div style={{ height: '100%', background: '#FF2080', borderRadius: 2 }} initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 1.4, delay: 0.2, ease: 'easeInOut' }} />
+    <motion.div className="splash-screen"
+      initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
+      <motion.div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}>
+
+        <motion.img
+          src={logo}
+          alt="Redwing Labs"
+          style={{ height: 80, marginBottom: 16 }}
+          initial={{ filter: 'brightness(0) invert(1)', opacity: 0 }}
+          animate={{ filter: 'brightness(0) invert(1)', opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+        />
+
+        <div style={{ width: 120, height: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden', marginTop: 12 }}>
+          <motion.div
+            style={{ height: '100%', background: '#FF2080', borderRadius: 2 }}
+            initial={{ width: 0 }}
+            animate={{ width: '100%' }}
+            transition={{ duration: 1.5, ease: 'easeInOut' }}
+          />
         </div>
+
+        <motion.div
+          style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, marginTop: 12, fontWeight: 600, textTransform: 'uppercase' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+        >
+          Systems Initializing
+        </motion.div>
       </motion.div>
     </motion.div>
   )
@@ -149,19 +176,21 @@ export default function App() {
   const lfaoDisable = displayFlights.filter(f => f.lfao === 'Disable').length
   const lfaoTotal = lfaoWorked + lfaoPartial + lfaoDisable
 
+
   const hasData = displayFlights.length > 0
+  const handleSplashDone = useCallback(() => setReady(true), []) // Fix: Stability for Splash effect
 
   return (
     <div className="app">
       <AnimatePresence>
-        {!ready && <Splash key="s" onDone={() => setReady(true)} />}
+        {!ready && <Splash key="s" onDone={handleSplashDone} />}
       </AnimatePresence>
 
       {ready && <>
         <header className="header">
           <div className="header-main">
             <div className="logo">
-              <span className="logo-mark">Redwing</span>
+              <img src={logo} alt="Redwing" style={{ height: 32, filter: 'brightness(0) invert(1)' }} />
               <div className="logo-divider" />
               <span className="logo-sub">Operations</span>
             </div>
@@ -189,6 +218,9 @@ export default function App() {
               ))}
             </div>
             <div className="status-group">
+              <button className="refresh-btn" onClick={() => window.location.reload()} title="Refresh Data">
+                ↻
+              </button>
               <span className="header-time">{clock} IST</span>
               <div className={`live-pill ${!flights.length ? 'loading' : ''}`}>
                 <span className="pulse-dot" /> {flights.length ? 'LIVE SYNC' : 'CONNECTING...'}
@@ -578,88 +610,96 @@ export default function App() {
 
             {/* ═══ FLEET ═══ */}
             {tab === 'fleet' && (
-              <motion.div key="fl" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <div className="section-header" style={{ marginTop: 4 }}>
-                  <h2 className="section-title">Fleet Status</h2>
-                  <span className="section-count">{uavs.length} UAVs</span>
-                </div>
-
-                <div className="fleet-grid">
-                  {uavs.map(u => {
-                    const isAS04 = u.id === 'AS04'
-                    return (
-                      <div className="fleet-card" key={u.id}>
-                        <div className="fleet-top">
-                          <span className="fleet-id">{u.id}</span>
-                          <span className={`fleet-status ${isAS04 ? 'green' : 'amber'}`}>{isAS04 ? 'ACTIVE' : 'STANDBY'}</span>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Flights</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{u.flights}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Distance</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.round(u.distance)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>km</span></div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Airtime</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.floor(u.minutes / 60)}h{u.minutes % 60}m</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Payload</div>
-                            <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{(u.payload / 1000).toFixed(1)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>kg</span></div>
-                          </div>
-                        </div>
-
-                        <div className="fleet-stats">
-                          <span>Live <strong>{u.live}</strong></span>
-                          <span>Test <strong>{u.test}</strong></span>
-                          <span>FLS <strong style={{ color: 'var(--green)' }}>{u.live > 0 ? 'ACTIVE' : 'N/A'}</strong></span>
-                          <span>System <strong style={{ color: 'var(--green)' }}>V 2.0</strong></span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Flights by UAV */}
-                {hasData && <>
-                  <div className="section-header" style={{ marginTop: 28 }}>
-                    <h2 className="section-title">Flights by Aircraft</h2>
+              <motion.div key="fl" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="fleet-tab-layout">
+                <div className="fleet-split-view">
+                  <div className="fleet-map-pane">
+                    <FleetMap />
                   </div>
-                  {uavs.map(u => {
-                    const uavFlights = displayFlights.filter(f => f.uav === u.id)
-                    return (
-                      <div key={u.id} className="table-card" style={{ marginBottom: 16 }}>
-                        <div className="panel-head">
-                          <span className="panel-title">{u.id}</span>
-                          <span className="panel-green">{uavFlights.length} FLIGHTS</span>
-                        </div>
-                        <div className="table-wrap">
-                          <table className="data-table"><thead><tr>
-                            <th>Date</th><th>ID</th><th>Type</th><th>Pilot</th><th>Route</th><th>Dist</th><th>Dur</th><th>Payload</th><th>Precland</th>
-                          </tr></thead><tbody>
-                              {[...uavFlights].reverse().slice(0, 10).map((f, i) => (
-                                <tr key={i}>
-                                  <td className="mono">{f.date}</td>
-                                  <td className="mono bold">{f.flightId}</td>
-                                  <td><span className={`type-badge ${f.type === 'Live' ? 'live' : 'test'}`}>{f.type}</span></td>
-                                  <td>{f.pilot}</td>
-                                  <td style={{ color: 'var(--text)' }}>{f.from} → {f.to}</td>
-                                  <td className="mono">{f.distance > 0 ? `${f.distance}` : '-'}</td>
-                                  <td className="mono">{f.duration}</td>
-                                  <td className="mono">{f.payload > 0 ? `${f.payload}g` : '-'}</td>
-                                  <td><span className={`type-badge ${f.precland === 'On Marker' ? 'live' : 'test'}`}>{f.precland?.replace('Marker', '')}</span></td>
-                                </tr>
-                              ))}
-                            </tbody></table>
-                        </div>
+
+                  <div className="fleet-sidebar">
+                    <div className="section-header" style={{ marginTop: 0, marginBottom: 16 }}>
+                      <h2 className="section-title">Fleet Status</h2>
+                      <span className="section-count">{uavs.length} UAVs</span>
+                    </div>
+
+                    <div className="fleet-grid">
+                      {uavs.map(u => {
+                        const isAS04 = u.id === 'AS04'
+                        return (
+                          <div className="fleet-card" key={u.id}>
+                            <div className="fleet-top">
+                              <span className="fleet-id">{u.id}</span>
+                              <span className={`fleet-status ${isAS04 ? 'green' : 'amber'}`}>{isAS04 ? 'ACTIVE' : 'STANDBY'}</span>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Flights</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{u.flights}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Distance</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.round(u.distance)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>km</span></div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Airtime</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{Math.floor(u.minutes / 60)}h{u.minutes % 60}m</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Payload</div>
+                                <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{(u.payload / 1000).toFixed(1)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-3)' }}>kg</span></div>
+                              </div>
+                            </div>
+
+                            <div className="fleet-stats">
+                              <span>Live <strong>{u.live}</strong></span>
+                              <span>Test <strong>{u.test}</strong></span>
+                              <span>FLS <strong style={{ color: 'var(--green)' }}>{u.live > 0 ? 'ACTIVE' : 'N/A'}</strong></span>
+                              <span>System <strong style={{ color: 'var(--green)' }}>V 2.0</strong></span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Flights by UAV */}
+                    {hasData && <>
+                      <div className="section-header" style={{ marginTop: 28 }}>
+                        <h2 className="section-title">Flights by Aircraft</h2>
                       </div>
-                    )
-                  })}
-                </>}
+                      {uavs.map(u => {
+                        const uavFlights = displayFlights.filter(f => f.uav === u.id)
+                        return (
+                          <div key={u.id} className="table-card" style={{ marginBottom: 16 }}>
+                            <div className="panel-head">
+                              <span className="panel-title">{u.id}</span>
+                              <span className="panel-green">{uavFlights.length} FLIGHTS</span>
+                            </div>
+                            <div className="table-wrap">
+                              <table className="data-table"><thead><tr>
+                                <th>Date</th><th>ID</th><th>Type</th><th>Pilot</th><th>Route</th><th>Dist</th><th>Dur</th><th>Payload</th><th>Precland</th>
+                              </tr></thead><tbody>
+                                  {[...uavFlights].reverse().slice(0, 10).map((f, i) => (
+                                    <tr key={i}>
+                                      <td className="mono">{f.date}</td>
+                                      <td className="mono bold">{f.flightId}</td>
+                                      <td><span className={`type-badge ${f.type === 'Live' ? 'live' : 'test'}`}>{f.type}</span></td>
+                                      <td>{f.pilot}</td>
+                                      <td style={{ color: 'var(--text)' }}>{f.from} → {f.to}</td>
+                                      <td className="mono">{f.distance > 0 ? `${f.distance}` : '-'}</td>
+                                      <td className="mono">{f.duration}</td>
+                                      <td className="mono">{f.payload > 0 ? `${f.payload}g` : '-'}</td>
+                                      <td><span className={`type-badge ${f.precland === 'On Marker' ? 'live' : 'test'}`}>{f.precland?.replace('Marker', '')}</span></td>
+                                    </tr>
+                                  ))}
+                                </tbody></table>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </>}
+                  </div>
+                </div>
               </motion.div>
             )}
 
