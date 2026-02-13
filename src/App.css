@@ -694,3 +694,49 @@
     font-size: 24px;
   }
 }
+
+/* ─── Period Toggle ─── */
+.period-toggle {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.period-btn {
+  background: transparent;
+  border: none;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.period-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.period-btn.active {
+  background: var(--pink);
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 32, 128, 0.4);
+}
+
+/* Loading state for pill */
+.live-pill.loading {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.live-pill.loading .pulse-dot {
+  background: rgba(255, 255, 255, 0.4);
+  animation: none;
+}
