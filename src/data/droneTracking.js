@@ -1,18 +1,31 @@
 // ─── Live Drone Tracking Service ───
-// Fetches real-time drone data from the Redwing tracking backend
+// Fetches real-time drone data from the Redwing FMS backend
+//
+// DEV:  Vite proxy → /tracking-api/* → ngrok URL (bypasses CORS + interstitial)
+// PROD: Vercel serverless function → /api/tracking (same bypass)
+// To change the ngrok URL, edit VITE_TRACKING_API in .env
 
-const TRACKING_API = 'http://100.102.218.97:8061'
+const NGROK_URL = import.meta.env.VITE_TRACKING_API || 'https://tifany-uncalm-melani.ngrok-free.dev'
 
-// ─── Node/Hub Locations (Paderu–Araku Corridor, AP) ───
+// Supabase anon key — used by the FMS backend for auth
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhbWhna3FraGJpdXB3amt2dm1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5ODI2OTgsImV4cCI6MjA3MDU1ODY5OH0.EAv2d5ekddn_So4hkqVqotnc4o9rVrGmlVdiTqS2AbM'
+
+// In dev → Vite proxy; in prod → Vercel serverless function; fallback → direct
+function getApiUrl(path) {
+    if (import.meta.env.DEV) return `/tracking-api${path}`
+    return `/api/tracking?path=${encodeURIComponent(path)}`
+}
+
+// ─── Node/Hub Locations (Paderu–Araku Corridor, AP) — verified coords ───
 export const NODE_LOCATIONS = [
-    { name: 'Paderu', lat: 18.0735, lng: 82.5704, type: 'hub', label: 'HUB' },
+    { name: 'Paderu', lat: 18.0833, lng: 82.6670, type: 'hub', label: 'HUB' },
     { name: 'Araku Valley', lat: 18.3273, lng: 82.8756, type: 'node', label: 'Node' },
-    { name: 'Chintapalli', lat: 17.8529, lng: 82.3519, type: 'node', label: 'Node' },
-    { name: 'Munchingiputtu', lat: 17.9940, lng: 82.6070, type: 'node', label: 'Node' },
-    { name: 'Lothugedda', lat: 18.1080, lng: 82.5180, type: 'node', label: 'Node' },
-    { name: 'Sunkarametta', lat: 18.1437, lng: 82.6174, type: 'node', label: 'Node' },
-    { name: 'Bheemavaram', lat: 18.0200, lng: 82.5400, type: 'node', label: 'Node' },
-    { name: 'Tajangi', lat: 18.2100, lng: 82.7100, type: 'node', label: 'Node' },
+    { name: 'Chintapalli', lat: 17.8707, lng: 82.3518, type: 'node', label: 'Node' },
+    { name: 'Munchingiputtu', lat: 18.3663, lng: 82.5086, type: 'node', label: 'Node' },
+    { name: 'Lothugedda', lat: 17.9622, lng: 82.3942, type: 'node', label: 'Node' },
+    { name: 'Sunkarametta', lat: 18.2783, lng: 82.9675, type: 'node', label: 'Node' },
+    { name: 'Bheemavaram', lat: 18.0480, lng: 82.7390, type: 'node', label: 'Node' },
+    { name: 'Tajangi', lat: 17.8709, lng: 82.4942, type: 'node', label: 'Node' },
 ]
 
 // Status mapping from API values to display
@@ -29,12 +42,17 @@ export function getStatusInfo(status) {
 }
 
 /**
- * Fetch live drone data from the tracking backend.
+ * Fetch live drone data from the Redwing FMS backend.
  * Returns an array of drone objects with normalized fields.
  */
 export async function fetchLiveDrones() {
     try {
-        const response = await fetch(`${TRACKING_API}/get_supabase_data`)
+        const response = await fetch(getApiUrl('/get_supabase_data'), {
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
+            },
+        })
         if (!response.ok) {
             console.warn('Drone tracking API error:', response.status)
             return []
