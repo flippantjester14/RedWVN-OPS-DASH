@@ -1,7 +1,11 @@
 // ─── Live Drone Tracking Service ───
 // Fetches real-time drone data from the Redwing tracking backend
+// In dev, requests go through the Vite proxy (/tracking-api → backend)
+// To change the backend URL, edit VITE_TRACKING_API in .env
 
-const TRACKING_API = 'http://100.102.218.97:8061'
+const TRACKING_API = import.meta.env.DEV
+    ? '/tracking-api'                                        // Vite proxy handles forwarding
+    : (import.meta.env.VITE_TRACKING_API || 'http://100.102.218.97:8061')
 
 // ─── Node/Hub Locations (Paderu–Araku Corridor, AP) ───
 export const NODE_LOCATIONS = [
