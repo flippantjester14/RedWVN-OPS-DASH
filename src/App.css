@@ -930,79 +930,108 @@
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(180deg);
 }
-/*  Fleet Layout (Split View)  */
+
+/*  Fleet Layout — Stacked (no overlap) */
 .fleet-tab-layout {
-  height: calc(100vh - 100px); /* Fill screen minus header/padding */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 0;
 }
 
-.fleet-split-view {
-  display: flex;
-  flex: 1;
-  gap: 20px;
-  overflow: hidden;
+.fleet-map-section {
+  margin-bottom: 24px;
 }
 
-.fleet-map-pane {
-  flex: 1;
-  position: relative;
-  min-width: 0; /* Flexbox trick */
-}
-
-/* Override default map wrapper height in this layout */
-.fleet-map-pane .map-wrapper {
-  height: 100% !important;
+.fleet-map-section .map-wrapper {
+  height: 420px;
   margin-bottom: 0;
-  border-radius: 12px;
 }
 
-.fleet-sidebar {
-  width: 380px;
-  overflow-y: auto;
-  padding-right: 8px; /* For scrollbar space */
+/* ─── Fleet Status Colors ─── */
+.fleet-status.blue {
+  background: rgba(6, 148, 162, 0.12);
+  color: #0694A2;
+}
+
+.fleet-status.grey {
+  background: var(--bg-alt);
+  color: var(--text-3);
+}
+
+.fleet-status.red {
+  background: rgba(208, 56, 1, 0.1);
+  color: #D03801;
+}
+
+/* ─── Telemetry Grid ─── */
+.fleet-telemetry {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.telem-item {
+  text-align: center;
+}
+
+.telem-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.telem-value {
+  display: block;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.telem-unit {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-left: 1px;
+}
+
+/* ─── Fleet Extra Row ─── */
+.fleet-extra-row {
   display: flex;
-  flex-direction: column;
   gap: 16px;
-  padding-bottom: 20px;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 10px 0;
+  margin-bottom: 4px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
-/* Custom scrollbar for sidebar */
-.fleet-sidebar::-webkit-scrollbar {
-  width: 6px;
-}
-.fleet-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.fleet-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-.fleet-sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Mobile Responsive for Fleet Split */
+/* ─── Mobile Responsive ─── */
 @media (max-width: 1024px) {
-  .fleet-tab-layout {
-    height: auto; /* Allow scrolling on smaller screens */
-    overflow: visible;
+  .fleet-map-section .map-wrapper {
+    height: 350px;
   }
-  
-  .fleet-split-view {
-    flex-direction: column;
-    overflow: visible;
-    gap: 24px;
-  }
-  
-  .fleet-map-pane {
-    height: 400px;
-  }
-  
-  .fleet-sidebar {
-    width: 100%;
-    overflow-y: visible;
+
+  .fleet-grid {
+    grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 640px) {
+  .fleet-map-section .map-wrapper {
+    height: 280px;
+  }
+
+  .fleet-telemetry {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
