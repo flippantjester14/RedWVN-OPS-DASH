@@ -638,12 +638,6 @@ export default function App() {
                     <span><strong>Cached data</strong> · FMS backend unreachable · Last updated <strong>{droneStatus.ageText}</strong> · {droneStatus.failCount} failed attempt{droneStatus.failCount !== 1 ? 's' : ''}</span>
                   </div>
                 )}
-                {liveDrones.length > 0 && liveDrones[0]?._fromMetadata && (
-                  <div style={{ padding: '10px 16px', background: 'rgba(107, 114, 128, 0.08)', border: '1px solid rgba(107, 114, 128, 0.2)', borderRadius: 8, marginTop: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--text-3)' }}>
-                    <span style={{ fontSize: 16 }}>📡</span>
-                    <span><strong>Metadata only</strong> · No live telemetry available · Showing registered aircraft from Supabase</span>
-                  </div>
-                )}
 
                 {/* Live Fleet Status */}
                 <div className="section-header" style={{ marginTop: 24, marginBottom: 16 }}>

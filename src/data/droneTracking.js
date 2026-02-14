@@ -1,17 +1,13 @@
 // ─── Live Drone Tracking Service ───
-// Resilient data fetching with retry, caching, and direct Supabase fallback
+// Resilient data fetching with retry + caching
 //
 // Primary:  ngrok FMS backend → live MAVLink telemetry
-// Fallback: Supabase REST API → drone config/metadata + alarms
-// Cache:    Last successful fetch is cached in memory for stale-but-real data
+// Fallback: Cached last-known data (up to 5 min)
+// Final:    Empty array → App.jsx shows UAV stats from Google Sheet flight logs
 
 const NGROK_URL = import.meta.env.VITE_TRACKING_API || 'https://tifany-uncalm-melani.ngrok-free.dev'
 
-// Supabase direct access (bypasses ngrok entirely)
-const SUPABASE_URL = 'https://iamhgkqkhbiupwjkvvml.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhbWhna3FraGJpdXB3amt2dm1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5ODI2OTgsImV4cCI6MjA3MDU1ODY5OH0.EAv2d5ekddn_So4hkqVqotnc4o9rVrGmlVdiTqS2AbM'
-
-// In dev → Vite proxy; in prod → Vercel serverless function; fallback → direct
+// In dev → Vite proxy; in prod → Vercel serverless function
 function getApiUrl(path) {
     if (import.meta.env.DEV) return `/tracking-api${path}`
     return `/api/tracking?path=${encodeURIComponent(path)}`
@@ -45,10 +41,8 @@ export function getStatusInfo(status) {
 // ─── In-memory cache ───
 let _cachedDrones = []
 let _cachedTimestamp = null
-let _cachedMetadata = null       // Supabase drone config
-let _cachedAlarms = null         // Supabase alarms
 let _consecutiveFailures = 0
-const MAX_CACHE_AGE_MS = 5 * 60 * 1000  // 5 minutes max stale data
+const MAX_CACHE_AGE_MS = 5 * 60 * 1000  // 5 min max stale
 
 /**
  * Get cache status info for UI display
@@ -74,48 +68,6 @@ function formatAge(ms) {
     return `${Math.floor(min / 60)}h ${min % 60}m ago`
 }
 
-// ─── Supabase direct fetch helpers ───
-async function supabaseFetch(table, query = '') {
-    const url = `${SUPABASE_URL}/rest/v1/${table}?select=*${query}`
-    const response = await fetch(url, {
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-        },
-    })
-    if (!response.ok) throw new Error(`Supabase ${table}: ${response.status}`)
-    return response.json()
-}
-
-/**
- * Fetch drone metadata directly from Supabase (bypasses ngrok).
- * Returns setup_drones config + active alarms.
- */
-export async function fetchDroneMetadata() {
-    if (_cachedMetadata) return _cachedMetadata
-
-    try {
-        const [drones, alarms] = await Promise.all([
-            supabaseFetch('setup_drones'),
-            supabaseFetch('alarms', '&alarm=eq.true'),
-        ])
-
-        _cachedMetadata = {
-            drones: drones || [],
-            alarms: alarms || [],
-        }
-
-        // Refresh metadata cache every 2 minutes
-        setTimeout(() => { _cachedMetadata = null }, 120000)
-
-        return _cachedMetadata
-    } catch (err) {
-        console.warn('Supabase metadata fetch failed:', err.message)
-        return { drones: [], alarms: [] }
-    }
-}
-
 /**
  * Fetch with retry and timeout.
  */
@@ -124,18 +76,12 @@ async function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 8000) 
         try {
             const controller = new AbortController()
             const timer = setTimeout(() => controller.abort(), timeoutMs)
-
-            const response = await fetch(url, {
-                ...options,
-                signal: controller.signal,
-            })
+            const response = await fetch(url, { ...options, signal: controller.signal })
             clearTimeout(timer)
-
             if (!response.ok) throw new Error(`HTTP ${response.status}`)
             return response
         } catch (err) {
             if (attempt === retries) throw err
-            // Wait briefly before retry (200ms, 500ms)
             await new Promise(r => setTimeout(r, (attempt + 1) * 250))
         }
     }
@@ -164,7 +110,6 @@ function normalizeDrone(d) {
         currentConsumed: d.current_consumed ?? null,
         temperature: d.system_temperature ?? null,
         timestamp: d.timestamp ?? null,
-        // Supabase fields
         aircraftName: d.aircraft_name ?? d.drone_id,
         aircraftNo: d.aircraft_no ?? '',
         orderId: d.order_id ?? null,
@@ -173,61 +118,8 @@ function normalizeDrone(d) {
         takeoffLocation: d.takeoff_location ?? null,
         landingLocation: d.landing_location ?? null,
         lastReceived: d.last_received ?? null,
-        // Cache metadata
         _fromCache: false,
     }
-}
-
-/**
- * Build drone entries from Supabase metadata when live API is down.
- * These won't have telemetry (lat/lon/speed) but will have drone names and alarm info.
- */
-function buildDronesFromMetadata(metadata) {
-    if (!metadata || !metadata.drones || metadata.drones.length === 0) return []
-
-    const activeAlarms = new Map()
-    if (metadata.alarms) {
-        metadata.alarms.forEach(a => {
-            if (!activeAlarms.has(a.drone_id)) activeAlarms.set(a.drone_id, [])
-            activeAlarms.get(a.drone_id).push(a)
-        })
-    }
-
-    return metadata.drones
-        .filter(d => d.setup)
-        .map(d => ({
-            id: d.aircraft_name,
-            sysid: d.SYSID_THISMAV,
-            status: 'unknown',
-            lat: null,
-            lon: null,
-            alt: 0,
-            relativeAlt: 0,
-            groundspeed: 0,
-            airspeed: 0,
-            heading: 0,
-            climb: 0,
-            roll: 0,
-            pitch: 0,
-            batteryRemaining: null,
-            voltage: null,
-            currentConsumed: null,
-            temperature: null,
-            timestamp: null,
-            aircraftName: d.aircraft_name,
-            aircraftNo: d.tail_no || '',
-            orderId: null,
-            flightNo: null,
-            payloadWeight: null,
-            takeoffLocation: null,
-            landingLocation: null,
-            lastReceived: null,
-            _fromCache: false,
-            _fromMetadata: true,
-            _alarms: activeAlarms.get(d.aircraft_name) || [],
-            _network: d.network,
-            _cellCount: d.cell_count,
-        }))
 }
 
 /**
@@ -236,8 +128,8 @@ function buildDronesFromMetadata(metadata) {
  * Strategy:
  *  1. Try FMS backend via ngrok (with retry + timeout)
  *  2. On success → update cache, reset failure counter
- *  3. On failure → return cached data (marked as stale) if available
- *  4. If no cache → build minimal entries from Supabase metadata
+ *  3. On failure → return cached data (marked as stale) if < 5 min old
+ *  4. If no cache → return [] (App.jsx falls back to UAV stats from Google Sheet)
  */
 export async function fetchLiveDrones() {
     // 1. Try FMS backend
@@ -281,18 +173,6 @@ export async function fetchLiveDrones() {
         console.log(`[Tracking] Cache expired (${formatAge(age)})`)
     }
 
-    // 3. Fall back to Supabase metadata
-    try {
-        const metadata = await fetchDroneMetadata()
-        const metaDrones = buildDronesFromMetadata(metadata)
-        if (metaDrones.length > 0) {
-            console.log(`[Tracking] Using Supabase metadata: ${metaDrones.length} drones`)
-            return metaDrones
-        }
-    } catch (err) {
-        console.warn('[Tracking] Supabase metadata fallback failed:', err.message)
-    }
-
-    // 4. Nothing available
+    // 3. No live data — App.jsx falls back to UAV stats from the Google Sheet
     return []
 }
