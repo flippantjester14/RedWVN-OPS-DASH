@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fetchFlightData, computeMetrics, getRouteStats, getPilotStats, getUAVStats, getDailyStats, getNodeStats, filterFlightsByPeriod, getMedicalOpsStats } from './data/flights'
-import { fetchLiveDrones, getStatusInfo } from './data/droneTracking'
+import { fetchLiveDrones, getStatusInfo, getCacheStatus } from './data/droneTracking'
 import FleetMap from './components/FleetMap'
 import logo from './assets/redwing_logo.png'
 import './App.css'
@@ -136,6 +136,7 @@ export default function App() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [liveDrones, setLiveDrones] = useState([])
+  const [droneStatus, setDroneStatus] = useState({ isStale: false, isCached: false, age: 0 })
 
   const [clock, setClock] = useState(ts())
   useEffect(() => { const t = setInterval(() => setClock(ts()), 1000); return () => clearInterval(t) }, [])
@@ -152,11 +153,12 @@ export default function App() {
     return () => clearInterval(poll)
   }, [])
 
-  // Fetch live drone tracking data
+  // Fetch live drone tracking data (with resilient retry + caching)
   useEffect(() => {
     const loadDrones = async () => {
       const data = await fetchLiveDrones()
       if (data.length > 0) setLiveDrones(data)
+      setDroneStatus(getCacheStatus())
     }
     loadDrones()
     const poll = setInterval(loadDrones, 5000)
@@ -629,11 +631,26 @@ export default function App() {
                   <FleetMap drones={liveDrones} />
                 </div>
 
+                {/* Stale data banner */}
+                {droneStatus.isStale && droneStatus.isCached && (
+                  <div style={{ padding: '10px 16px', background: 'rgba(208, 56, 1, 0.08)', border: '1px solid rgba(208, 56, 1, 0.2)', borderRadius: 8, marginTop: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--amber)' }}>
+                    <span style={{ fontSize: 16 }}>⚠</span>
+                    <span><strong>Cached data</strong> · FMS backend unreachable · Last updated <strong>{droneStatus.ageText}</strong> · {droneStatus.failCount} failed attempt{droneStatus.failCount !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {liveDrones.length > 0 && liveDrones[0]?._fromMetadata && (
+                  <div style={{ padding: '10px 16px', background: 'rgba(107, 114, 128, 0.08)', border: '1px solid rgba(107, 114, 128, 0.2)', borderRadius: 8, marginTop: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--text-3)' }}>
+                    <span style={{ fontSize: 16 }}>📡</span>
+                    <span><strong>Metadata only</strong> · No live telemetry available · Showing registered aircraft from Supabase</span>
+                  </div>
+                )}
+
                 {/* Live Fleet Status */}
                 <div className="section-header" style={{ marginTop: 24, marginBottom: 16 }}>
                   <h2 className="section-title">Live Fleet Status</h2>
                   <span className="section-count">
                     {liveDrones.length > 0 ? `${liveDrones.length} tracked` : `${uavs.length} UAVs`}
+                    {droneStatus.isStale && ' · STALE'}
                   </span>
                 </div>
 
