@@ -1,11 +1,20 @@
 // ─── Live Drone Tracking Service ───
-// Fetches real-time drone data from the Redwing tracking backend
-// In dev, requests go through the Vite proxy (/tracking-api → backend)
-// To change the backend URL, edit VITE_TRACKING_API in .env
+// Fetches real-time drone data from the Redwing FMS backend
+//
+// DEV:  Vite proxy → /tracking-api/* → ngrok URL (bypasses CORS + interstitial)
+// PROD: Vercel serverless function → /api/tracking (same bypass)
+// To change the ngrok URL, edit VITE_TRACKING_API in .env
 
-const TRACKING_API = import.meta.env.DEV
-    ? '/tracking-api'                                        // Vite proxy handles forwarding
-    : (import.meta.env.VITE_TRACKING_API || 'http://100.102.218.97:8061')
+const NGROK_URL = import.meta.env.VITE_TRACKING_API || 'https://tifany-uncalm-melani.ngrok-free.dev'
+
+// Supabase anon key — used by the FMS backend for auth
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhbWhna3FraGJpdXB3amt2dm1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5ODI2OTgsImV4cCI6MjA3MDU1ODY5OH0.EAv2d5ekddn_So4hkqVqotnc4o9rVrGmlVdiTqS2AbM'
+
+// In dev → Vite proxy; in prod → Vercel serverless function; fallback → direct
+function getApiUrl(path) {
+    if (import.meta.env.DEV) return `/tracking-api${path}`
+    return `/api/tracking?path=${encodeURIComponent(path)}`
+}
 
 // ─── Node/Hub Locations (Paderu–Araku Corridor, AP) ───
 export const NODE_LOCATIONS = [
@@ -33,12 +42,17 @@ export function getStatusInfo(status) {
 }
 
 /**
- * Fetch live drone data from the tracking backend.
+ * Fetch live drone data from the Redwing FMS backend.
  * Returns an array of drone objects with normalized fields.
  */
 export async function fetchLiveDrones() {
     try {
-        const response = await fetch(`${TRACKING_API}/get_supabase_data`)
+        const response = await fetch(getApiUrl('/get_supabase_data'), {
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
+            },
+        })
         if (!response.ok) {
             console.warn('Drone tracking API error:', response.status)
             return []
