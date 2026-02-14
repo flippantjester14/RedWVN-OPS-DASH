@@ -62,7 +62,11 @@ export async function fetchFlightData() {
                             // Extra
                             orderId: row[14] || '',
                             detAlt: row[20] ? parseInt(row[20]) : null,
-                            landOff: row[21] ? parseFloat(row[21]) : null
+                            landOff: row[21] ? parseFloat(row[21]) : null,
+                            // Extra analytics columns
+                            flsWorking: row[18] || '',       // "Working" / "Issue found" / "Didn't Use"
+                            preclandRemarks: row[22] || '',  // leg placement details
+                            lfaoRemarks: row[24] || '',      // "Till 20m it worked" etc.
                         }
                     }).filter(Boolean)
 
@@ -282,4 +286,117 @@ export function getMedicalOpsStats(flights) {
         routes: Object.values(routeMap).sort((a, b) => b.count - a.count),
         daily
     }
+}
+
+// ─── FLS (Flight Launch Services) Stats ───
+export function getFLSStats(flights) {
+    if (!flights || flights.length === 0) return { use: 0, disable: 0, didntUse: 0, total: 0, working: 0, issues: 0, issueRate: 0 }
+
+    const use = flights.filter(f => f.fls === 'Use').length
+    const disable = flights.filter(f => f.fls === 'Disable').length
+    const didntUse = flights.filter(f => f.fls !== 'Use' && f.fls !== 'Disable').length
+    const working = flights.filter(f => f.flsWorking === 'Working').length
+    const issues = flights.filter(f => f.flsWorking === 'Issue found').length
+    const total = flights.length
+
+    return {
+        use, disable, didntUse, total,
+        useRate: total > 0 ? Math.round(use / total * 100) : 0,
+        working, issues,
+        issueRate: use > 0 ? Math.round(issues / use * 100) : 0,
+    }
+}
+
+// ─── Payload Weight Distribution ───
+export function getPayloadDistribution(flights) {
+    if (!flights || flights.length === 0) return []
+
+    const buckets = [
+        { label: '0g', min: 0, max: 0, count: 0 },
+        { label: '1-500g', min: 1, max: 500, count: 0 },
+        { label: '501-1000g', min: 501, max: 1000, count: 0 },
+        { label: '1-1.5kg', min: 1001, max: 1500, count: 0 },
+        { label: '1.5-2kg', min: 1501, max: 2000, count: 0 },
+        { label: '>2kg', min: 2001, max: Infinity, count: 0 },
+    ]
+
+    flights.forEach(f => {
+        const w = f.payload || 0
+        const bucket = buckets.find(b => w >= b.min && w <= b.max)
+        if (bucket) bucket.count++
+    })
+
+    return buckets
+}
+
+// ─── Flight Duration Stats per UAV ───
+export function getFlightDurationStats(flights) {
+    if (!flights || flights.length === 0) return []
+
+    const byUAV = {}
+    flights.forEach(f => {
+        if (!f.duration || !f.uav) return
+        const [h, m] = f.duration.split(':').map(Number)
+        const mins = (h || 0) * 60 + (m || 0)
+        if (mins === 0) return
+
+        if (!byUAV[f.uav]) byUAV[f.uav] = { id: f.uav, durations: [], total: 0 }
+        byUAV[f.uav].durations.push(mins)
+        byUAV[f.uav].total += mins
+    })
+
+    return Object.values(byUAV).map(u => ({
+        id: u.id,
+        avgDuration: Math.round(u.total / u.durations.length),
+        maxDuration: Math.max(...u.durations),
+        minDuration: Math.min(...u.durations),
+        totalMinutes: u.total,
+        flightCount: u.durations.length,
+    })).sort((a, b) => b.totalMinutes - a.totalMinutes)
+}
+
+// ─── Landing Accuracy Stats (from landing offset data) ───
+export function getLandingAccuracyStats(flights) {
+    if (!flights || flights.length === 0) return { overall: null, byDay: [], byUAV: [] }
+
+    const withOffset = flights.filter(f => f.landOff != null && !isNaN(f.landOff))
+    if (withOffset.length === 0) return { overall: null, byDay: [], byUAV: [] }
+
+    const allOffsets = withOffset.map(f => f.landOff)
+    const overall = {
+        avg: Math.round(allOffsets.reduce((a, b) => a + b, 0) / allOffsets.length * 100) / 100,
+        min: Math.min(...allOffsets),
+        max: Math.max(...allOffsets),
+        count: allOffsets.length,
+    }
+
+    // By day
+    const dayMap = {}
+    withOffset.forEach(f => {
+        if (!dayMap[f.date]) dayMap[f.date] = { date: f.date, offsets: [] }
+        dayMap[f.date].offsets.push(f.landOff)
+    })
+    const byDay = Object.values(dayMap).map(d => ({
+        date: d.date,
+        avg: Math.round(d.offsets.reduce((a, b) => a + b, 0) / d.offsets.length * 100) / 100,
+        count: d.offsets.length,
+    })).sort((a, b) => {
+        const [da, ma, ya] = a.date.split('-').map(Number)
+        const [db, mb, yb] = b.date.split('-').map(Number)
+        return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db)
+    })
+
+    // By UAV
+    const uavMap = {}
+    withOffset.forEach(f => {
+        if (!uavMap[f.uav]) uavMap[f.uav] = { id: f.uav, offsets: [] }
+        uavMap[f.uav].offsets.push(f.landOff)
+    })
+    const byUAV = Object.values(uavMap).map(u => ({
+        id: u.id,
+        avg: Math.round(u.offsets.reduce((a, b) => a + b, 0) / u.offsets.length * 100) / 100,
+        count: u.offsets.length,
+    })).sort((a, b) => a.avg - b.avg)
+
+    return { overall, byDay, byUAV }
 }
