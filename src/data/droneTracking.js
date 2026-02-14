@@ -16,16 +16,16 @@ function getApiUrl(path) {
     return `/api/tracking?path=${encodeURIComponent(path)}`
 }
 
-// ─── Node/Hub Locations (Paderu–Araku Corridor, AP) ───
+// ─── Node/Hub Locations (Paderu–Araku Corridor, AP) — verified coords ───
 export const NODE_LOCATIONS = [
-    { name: 'Paderu', lat: 18.0735, lng: 82.5704, type: 'hub', label: 'HUB' },
+    { name: 'Paderu', lat: 18.0833, lng: 82.6670, type: 'hub', label: 'HUB' },
     { name: 'Araku Valley', lat: 18.3273, lng: 82.8756, type: 'node', label: 'Node' },
-    { name: 'Chintapalli', lat: 17.8529, lng: 82.3519, type: 'node', label: 'Node' },
-    { name: 'Munchingiputtu', lat: 17.9940, lng: 82.6070, type: 'node', label: 'Node' },
-    { name: 'Lothugedda', lat: 18.1080, lng: 82.5180, type: 'node', label: 'Node' },
-    { name: 'Sunkarametta', lat: 18.1437, lng: 82.6174, type: 'node', label: 'Node' },
-    { name: 'Bheemavaram', lat: 18.0200, lng: 82.5400, type: 'node', label: 'Node' },
-    { name: 'Tajangi', lat: 18.2100, lng: 82.7100, type: 'node', label: 'Node' },
+    { name: 'Chintapalli', lat: 17.8707, lng: 82.3518, type: 'node', label: 'Node' },
+    { name: 'Munchingiputtu', lat: 18.3663, lng: 82.5086, type: 'node', label: 'Node' },
+    { name: 'Lothugedda', lat: 17.9622, lng: 82.3942, type: 'node', label: 'Node' },
+    { name: 'Sunkarametta', lat: 18.2783, lng: 82.9675, type: 'node', label: 'Node' },
+    { name: 'Bheemavaram', lat: 18.0480, lng: 82.7390, type: 'node', label: 'Node' },
+    { name: 'Tajangi', lat: 17.8709, lng: 82.4942, type: 'node', label: 'Node' },
 ]
 
 // Status mapping from API values to display
