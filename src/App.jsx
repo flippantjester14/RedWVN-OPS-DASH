@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { fetchFlightData, computeMetrics, getRouteStats, getPilotStats, getUAVStats, getDailyStats, getNodeStats, filterFlightsByPeriod, getMedicalOpsStats } from './data/flights'
+import { fetchFlightData, computeMetrics, getRouteStats, getPilotStats, getUAVStats, getDailyStats, getNodeStats, filterFlightsByPeriod, getMedicalOpsStats, getFLSStats, getPayloadDistribution, getFlightDurationStats, getLandingAccuracyStats } from './data/flights'
 import { fetchLiveDrones, getStatusInfo, getCacheStatus } from './data/droneTracking'
 import FleetMap from './components/FleetMap'
 import logo from './assets/redwing_logo.png'
@@ -79,26 +79,74 @@ function Splash({ onDone }) {
   )
 }
 
-/* ─── Mini bar chart ─── */
-function BarChart({ data, maxVal, color = 'var(--pink)', height = 80 }) {
+/* ─── Bar chart with tooltips and clear data differentiation ─── */
+function BarChart({ data, maxVal, color = 'var(--pink)', height = 220, unit = '', maxBars = 21 }) {
+  const [hover, setHover] = useState(null)
   if (!data || data.length === 0) return <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 12 }}>No data</div>
-  const max = maxVal || Math.max(...data.map(d => d.value), 1)
+
+  const displayData = data.length > maxBars ? data.slice(-maxBars) : data
+  const clipped = data.length > maxBars
+  const max = maxVal || Math.max(...displayData.map(d => d.value), 1)
+  const labelHeight = 20 // space reserved for labels
+  const barAreaHeight = height - labelHeight
+
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height }}>
-      {data.map((d, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <motion.div
-            initial={{ height: 0 }} animate={{ height: `${(d.value / max) * 100}%` }}
-            transition={{ duration: 0.6, delay: i * 0.05 }}
-            style={{ width: '100%', background: color, borderRadius: '2px 2px 0 0', minHeight: d.value > 0 ? 2 : 0 }}
-            title={`${d.label}: ${d.value}`}
-          />
-          <span style={{ fontSize: 8, color: 'var(--text-3)', fontWeight: 600, whiteSpace: 'nowrap' }}>{d.label}</span>
+    <div>
+      {clipped && (
+        <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 6, fontStyle: 'italic' }}>
+          Showing last {maxBars} of {data.length} entries
         </div>
-      ))}
+      )}
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', gap: displayData.length > 20 ? 2 : 4,
+        height, position: 'relative', paddingBottom: labelHeight,
+      }}>
+        {displayData.map((d, i) => {
+          // Calculate bar height in pixels — this always works
+          const barPx = d.value > 0 ? Math.max(Math.round((d.value / max) * barAreaHeight), 6) : 0
+          return (
+            <div key={i} style={{
+              flex: 1, minWidth: displayData.length > 20 ? 8 : 16,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'flex-end', position: 'relative', height: '100%',
+            }}
+              onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+              {hover === i && (
+                <div style={{
+                  position: 'absolute', bottom: barPx + labelHeight + 8, left: '50%', transform: 'translateX(-50%)',
+                  background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 6,
+                  padding: '6px 10px', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                  zIndex: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', pointerEvents: 'none',
+                }}>
+                  <div style={{ color: 'var(--text)', fontSize: 13, fontWeight: 700 }}>{typeof d.value === 'number' ? d.value.toLocaleString() : d.value}{unit ? ` ${unit}` : ''}</div>
+                  <div style={{ color: 'var(--text-3)', fontSize: 10, marginTop: 2 }}>{d.label}</div>
+                </div>
+              )}
+              <motion.div
+                initial={{ height: 0 }} animate={{ height: barPx }}
+                transition={{ duration: 0.5, delay: Math.min(i * 0.02, 0.4) }}
+                style={{
+                  width: '100%', background: color, borderRadius: '3px 3px 0 0',
+                  cursor: 'pointer',
+                  opacity: hover !== null && hover !== i ? 0.35 : 1,
+                  filter: hover === i ? 'brightness(1.2)' : 'none',
+                  transition: 'opacity 0.15s ease, filter 0.15s ease',
+                }}
+              />
+              <span style={{
+                fontSize: displayData.length > 15 ? 7 : 9,
+                color: hover === i ? 'var(--text)' : 'var(--text-3)',
+                fontWeight: 600, whiteSpace: 'nowrap', marginTop: 4,
+                position: 'absolute', bottom: 0,
+              }}>{d.label}</span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
+
 
 /* ─── Progress ring ─── */
 function Ring({ value, max, size = 48, color = 'var(--pink)' }) {
@@ -189,6 +237,12 @@ export default function App() {
   const lfaoPartial = displayFlights.filter(f => f.lfao && f.lfao.includes('Partial')).length
   const lfaoDisable = displayFlights.filter(f => f.lfao === 'Disable').length
   const lfaoTotal = lfaoWorked + lfaoPartial + lfaoDisable
+
+  // New analytics
+  const flsStats = useMemo(() => getFLSStats(displayFlights), [displayFlights])
+  const payloadDist = useMemo(() => getPayloadDistribution(displayFlights), [displayFlights])
+  const durationStats = useMemo(() => getFlightDurationStats(displayFlights), [displayFlights])
+  const landingAcc = useMemo(() => getLandingAccuracyStats(displayFlights), [displayFlights])
 
 
   const hasData = displayFlights.length > 0
@@ -300,7 +354,8 @@ export default function App() {
                         <BarChart
                           data={daily.map(d => ({ label: d.date.slice(0, 5), value: d.flights }))}
                           color="var(--pink)"
-                          height={120}
+                          height={240}
+                          unit="flights"
                         />
                         <div style={{ marginTop: 12, display: 'flex', gap: 16, fontSize: 11, color: 'var(--text-3)' }}>
                           {daily.length > 0 && (
@@ -458,7 +513,8 @@ export default function App() {
                           <BarChart
                             data={medOps.daily.map(d => ({ label: d.date.slice(0, 5), value: d.count }))}
                             color="var(--pink)"
-                            height={160}
+                            height={240}
+                            unit="deliveries"
                           />
                         </div>
                       </div>
@@ -553,7 +609,8 @@ export default function App() {
                       <BarChart
                         data={daily.map(d => ({ label: d.date.slice(0, 5), value: Math.round(d.distance) }))}
                         color="var(--blue)"
-                        height={128}
+                        height={240}
+                        unit="km"
                       />
                     </div>
                   </div>
@@ -584,6 +641,90 @@ export default function App() {
                               </tr>
                             ))}
                           </tbody></table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FLS Adoption Rate */}
+                  <div className="responsive-grid-2" style={{ marginBottom: 28 }}>
+                    <div className="stat-card" style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                      <Ring value={flsStats.use} max={flsStats.total} size={64} color="var(--green)" />
+                      <div>
+                        <div className="stat-label">FLS Adoption</div>
+                        <div className="stat-value" style={{ fontSize: 28 }}>{flsStats.useRate}%</div>
+                        <div className="stat-footer"><span className="up">{flsStats.use}</span> used · {flsStats.disable} disabled · {flsStats.didntUse} skipped</div>
+                      </div>
+                    </div>
+                    <div className="stat-card" style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                      <Ring value={flsStats.issues} max={Math.max(flsStats.use, 1)} size={64} color="var(--amber)" />
+                      <div>
+                        <div className="stat-label">FLS Issue Rate</div>
+                        <div className="stat-value" style={{ fontSize: 28 }}>{flsStats.issueRate}%</div>
+                        <div className="stat-footer"><span className="up">{flsStats.working}</span> working · <span style={{ color: 'var(--amber)' }}>{flsStats.issues}</span> issues found</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payload Weight Distribution */}
+                  <div className="panel" style={{ marginBottom: 28 }}>
+                    <div className="panel-head">
+                      <span className="panel-title">Payload Weight Distribution</span>
+                      <span className="panel-green">{displayFlights.filter(f => f.payload > 0).length} FLIGHTS WITH PAYLOAD</span>
+                    </div>
+                    <div className="panel-body" style={{ padding: 16 }}>
+                      <BarChart
+                        data={payloadDist.map(b => ({ label: b.label, value: b.count }))}
+                        color="var(--pink)"
+                        height={220}
+                        unit="flights"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Flight Duration by UAV */}
+                  {durationStats.length > 0 && (
+                    <div className="panel" style={{ marginBottom: 28 }}>
+                      <div className="panel-head">
+                        <span className="panel-title">Avg Flight Duration by UAV</span>
+                        <span className="panel-green">{durationStats.reduce((s, u) => s + u.flightCount, 0)} FLIGHTS</span>
+                      </div>
+                      <div className="panel-body" style={{ padding: 16 }}>
+                        <BarChart
+                          data={durationStats.map(u => ({ label: u.id, value: u.avgDuration }))}
+                          color="var(--green)"
+                          height={220}
+                          unit="min"
+                        />
+                        <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+                          {durationStats.map(u => (
+                            <div key={u.id} style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text)' }}>{u.id}</span>: {u.avgDuration} min avg · {u.totalMinutes} min total · {u.flightCount} flights
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Landing Accuracy by UAV */}
+                  {landingAcc.overall && (
+                    <div className="panel" style={{ marginBottom: 28 }}>
+                      <div className="panel-head">
+                        <span className="panel-title">Landing Accuracy by UAV</span>
+                        <span className="panel-green">AVG {landingAcc.overall.avg}m OFFSET</span>
+                      </div>
+                      <div className="panel-body" style={{ padding: 16 }}>
+                        <BarChart
+                          data={landingAcc.byUAV.map(u => ({ label: u.id, value: u.avg }))}
+                          color="var(--blue)"
+                          height={200}
+                          unit="m"
+                        />
+                        <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--text-3)' }}>
+                          <span>Min: <strong style={{ color: 'var(--green)' }}>{landingAcc.overall.min}m</strong></span>
+                          <span>Max: <strong style={{ color: 'var(--amber)' }}>{landingAcc.overall.max}m</strong></span>
+                          <span>Readings: <strong>{landingAcc.overall.count}</strong></span>
+                        </div>
                       </div>
                     </div>
                   )}
